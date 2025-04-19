@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: #0f172a;
+      color: white;
+    }
+    .table-danger {
+      background-color: #7f1d1d !important;
+    }
+    .toast-success {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #22c55e;
+      color: white;
+      padding: 15px 25px;
+      border-radius: 30px;
+      font-weight: bold;
+      font-size: 16px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.25);
+      z-index: 9999;
+      animation: slideUp 0.4s ease, fadeOut 0.4s ease 2.6s forwards;
+    }
+    @keyframes slideUp {
+      from { bottom: 0; opacity: 0; }
+      to { bottom: 20px; opacity: 1; }
+    }
+    @keyframes fadeOut {
+      to { opacity: 0; transform: translateX(-50%) translateY(10px); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container py-4">
+  <h2 class="text-center mb-4">Activation Key Dashboard</h2>
+
+  <div class="row text-center mb-4">
+    <div class="col">
+      <h4>Active</h4>
+      <p id="active_keys">0</p>
+    </div>
+    <div class="col">
+      <h4>Expired</h4>
+      <p id="expired_keys">0</p>
+    </div>
+    <div class="col">
+      <h4>Blocked</h4>
+      <p id="blocked_keys">0</p>
+    </div>
+  </div>
+
+  <h5>User Details</h5>
+  <table class="table table-striped table-dark">
+    <thead>
+      <tr>
+        <th>Key</th>
+        <th>Device</th>
+        <th>IP</th>
+        <th>Country</th>
+        <th>Phone</th>
+        <th>OS</th>
+        <th>Time</th>
+      </tr>
+    </thead>
+    <tbody id="userTable"></tbody>
+  </table>
+
+  <div class="mt-4">
+    <input type="text" id="disconnectId" class="form-control mb-2" placeholder="Enter Device ID to disconnect">
+    <button onclick="disconnectDevice()" class="btn btn-danger w-100 mb-3">Disconnect Device</button>
+
+    <input type="text" id="blockId" class="form-control mb-2" placeholder="Enter Device ID to block">
+    <button onclick="blockDevice()" class="btn btn-warning w-100 mb-3">Block Device</button>
+
+    <input type="text" id="unblockId" class="form-control mb-2" placeholder="Enter Device ID to unblock">
+    <button onclick="unblockDevice()" class="btn btn-success w-100">Unblock Device</button>
+  </div>
+</div>
+
+<script>
+let userBlockedDevices = [];
+
+function showLoginSuccess() {
+  const popup = document.createElement('div');
+  popup.className = 'toast-success';
+  popup.innerText = 'Login Successful!';
+  document.body.appendChild(popup);
+  setTimeout(() => popup.remove(), 3000);
+}
+
+function loadBlockedDevices() {
+  fetch('/blocked-devices')
+    .then(res => res.json())
+    .then(data => { userBlockedDevices = data.blocked; });
+}
+
+function loadStatus() {
+  fetch('/status')
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById('active_keys').textContent = data.active_keys;
+      document.getElementById('expired_keys').textContent = data.expired_keys;
+      document.getElementById('blocked_keys').textContent = data.blocked_keys;
+    });
+}
+
+function loadUsers() {
+  fetch('/user-details')
+    .then(res => res.json())
+    .then(data => {
+      const table = document.getElementById('userTable');
+      table.innerHTML = '';
+      data.forEach(user => {
+        const isBlocked = userBlockedDevices.includes(user.device_id);
+        const row = document.createElement('tr');
+        row.className = isBlocked ? 'table-danger' : '';
+        row.innerHTML = `
+          <td>${user.key}</td>
+          <td>${user.device_id}</td>
+          <td>${user.ip}</td>
+          <td>${user.country}</td>
+          <td>${user.phone}</td>
+          <td>${user.os}</td>
+          <td>${new Date(user.time).toLocaleString()}</td>
+        `;
+        table.appendChild(row);
+      });
+    });
+}
+
+function disconnectDevice() {
+  const deviceId = document.getElementById('disconnectId').value;
+  if (!deviceId) return alert('Enter a device ID first.');
+  fetch('/disconnect', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ device_id: deviceId })
+  })
+  .then(res => res.json())
+  .then(data => {
+    alert(data.message);
+    loadStatus();
+    loadUsers();
+    loadBlockedDevices();
+  });
+}
+
+function blockDevice() {
+  const deviceId = document.getElementById('blockId').value;
+  if (!deviceId) return alert('Enter a device ID to block.');
+  fetch('/block-device', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ device_id: deviceId })
+  })
+  .then(res => res.json())
+  .then(data => {
+    alert(data.message || data.error);
+    loadBlockedDevices();
+    loadUsers();
+  });
+}
+
+function unblockDevice() {
+  const deviceId = document.getElementById('unblockId').value;
+  if (!deviceId) return alert('Enter a device ID to unblock.');
+  fetch('/unblock-device', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ device_id: deviceId })
+  })
+  .then(res => res.json())
+  .then(data => {
+    alert(data.message || data.error);
+    loadBlockedDevices();
+    loadUsers();
+  });
+}
+
+window.onload = () => {
+  showLoginSuccess();
+  loadStatus();
+  loadUsers();
+  loadBlockedDevices();
+};
+
+setInterval(() => {
+  loadStatus();
+  loadUsers();
+  loadBlockedDevices();
+}, 10000);
+</script>
+</body>
+</html>

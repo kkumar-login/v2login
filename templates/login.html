@@ -1,0 +1,87 @@
+<!-- templates/login.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: #0f172a;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .login-box {
+      background: #1e293b;
+      padding: 30px;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.3);
+    }
+    .form-control {
+      background-color: #0f172a;
+      border: 1px solid #334155;
+      color: white;
+    }
+    .form-control:focus {
+      border-color: #38bdf8;
+      background-color: #0f172a;
+    }
+    .btn-login {
+      background-color: #38bdf8;
+      color: black;
+      font-weight: bold;
+    }
+    .alert-login {
+      background-color: #22c55e;
+      color: white;
+      font-weight: bold;
+      text-align: center;
+      border-radius: 10px;
+      margin-top: 20px;
+      padding: 12px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+<div class="login-box">
+  <h3 class="text-center mb-4">Admin Login</h3>
+  <input type="text" id="username" class="form-control mb-3" placeholder="Enter Username">
+  <input type="password" id="password" class="form-control mb-3" placeholder="Enter Password">
+  <button class="btn btn-login w-100" onclick="handleLogin()">Login</button>
+  <div id="loginAlert" class="alert-login">Login Successfully</div>
+</div>
+
+<script>
+function handleLogin() {
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
+
+  fetch('/login', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ username, password })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      const alertBox = document.getElementById("loginAlert");
+      alertBox.style.display = "block";
+      setTimeout(() => {
+        alertBox.style.display = "none";
+        window.location.href = "/dashboard";
+      }, 2000);
+    } else {
+      alert("Invalid credentials");
+    }
+  });
+}
+</script>
+</body>
+</html>
